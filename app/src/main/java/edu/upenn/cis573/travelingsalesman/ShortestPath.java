@@ -25,19 +25,13 @@ public class ShortestPath {
             for (int i = 0; i < p.size() - 1; i++) {
                 Point p1 = points[p.get(i)];
                 Point p2 = points[p.get(i + 1)];
-                double dx = p1.x - p2.x;
-                double dy = p1.y - p2.y;
-                double dist = Math.sqrt(dx * dx + dy * dy);
-                total += dist;
+                total += Line.distance(p1, p2);
             }
 
             // then need to go back to the beginning
             Point p1 = points[p.get(p.size() - 1)];
             Point p2 = points[p.get(0)];
-            double dx = p1.x - p2.x;
-            double dy = p1.y - p2.y;
-            double dist = Math.sqrt(dx * dx + dy * dy);
-            total += dist;
+            total += Line.distance(p1, p2);
 
             // see if this is the shortest  so far
             if (total < shortest) {

@@ -16,15 +16,14 @@ import java.util.*;
 
 public class GameView extends View {
 
-    protected ArrayList<Point> coordinates = new ArrayList<Point>();
-
-    protected ArrayList<Point[]> segments = new ArrayList<Point[]>();
+    protected Stroke stroke = new Stroke();
+    protected Segments segments = new Segments();
     private Point firstPoint;
     protected Point[] mapPoints;
     protected int spinnerNum;
     protected int attempt = 0;
-    protected boolean isValidStroke = false;
     protected static final Point[] mapPositions;
+    final int COLOR_POINT = Color.RED;
 
     // these points are all hardcoded to fit the UPenn campus map on a Nexus 5
     static {
@@ -61,19 +60,13 @@ public class GameView extends View {
         for (int i = 0; i < points.size()-1; i++) {
             Point p1 = points.get(i);
             Point p2 = points.get(i+1);
-            double dx = p1.x - p2.x;
-            double dy = p1.y - p2.y;
-            double dist = Math.sqrt(dx*dx + dy*dy);
-            total += dist;
+            total += Line.distance(p1, p2);
         }
 
         // then need to go back to the beginning
         Point p1 = points.get(points.size()-1);
         Point p2 = points.get(0);
-        double dx = p1.x - p2.x;
-        double dy = p1.y - p2.y;
-        double dist = Math.sqrt(dx*dx + dy*dy);
-        total += dist;
+        total += Line.distance(p1, p2);
 
         return total;
 
@@ -115,31 +108,30 @@ public class GameView extends View {
         Paint paint = new Paint();
 
         // draws the stroke
-        if (isValidStroke) {
-            if (coordinates.size() > 1) {
-                for (int i = 0; i < coordinates.size()-1; i++) {
-                    int x1 = coordinates.get(i).x;
-                    int y1 = coordinates.get(i).y;
-                    int x2 = coordinates.get(i+1).x;
-                    int y2 = coordinates.get(i+1).y;
+        if (stroke.isValid()) {
+            if (stroke.getCoordinates().size() > 1) {
+                for (int i = 0; i < stroke.getCoordinates().size()-1; i++) {
+                    int x1 = stroke.getCoordinates().get(i).x;
+                    int y1 = stroke.getCoordinates().get(i).y;
+                    int x2 = stroke.getCoordinates().get(i + 1).x;
+                    int y2 = stroke.getCoordinates().get(i + 1).y;
 
-                    paint.setColor(Color.YELLOW);
-                    paint.setStrokeWidth(10);
+                    paint.setColor(stroke.getColor());
+                    paint.setStrokeWidth(stroke.getWidth());
                     canvas.drawLine(x1, y1, x2, y2, paint);
                 }
             }
         }
 
         // draws the line segments
-        for (int i = 0; i < segments.size(); i++) {
-            Point[] points = segments.get(i);
-            paint.setColor(Color.RED);
-            paint.setStrokeWidth(10);
-            canvas.drawLine(points[0].x, points[0].y, points[1].x, points[1].y, paint);
+        for (Line li: segments.getList()) {
+            paint.setColor(segments.getColor());
+            paint.setStrokeWidth(segments.getWidth());
+            canvas.drawLine(li.getStartPoint().x, li.getStartPoint().y, li.getEndPoint().x, li.getEndPoint().y, paint);
         }
 
         // draws the points on the map
-        paint.setColor(Color.RED);
+        paint.setColor(COLOR_POINT);
 
         for (int i = 0; i < mapPoints.length; i++) {
             int x = mapPoints[i].x;
@@ -147,50 +139,47 @@ public class GameView extends View {
             canvas.drawRect(x, y, x+20, y+20, paint);
         }
 
-        // detects whether the segments form a circuit - but there's a bug!
-        boolean isCircuit = true;
-        HashMap<Point, Integer> connections = new HashMap<Point, Integer>();
-        for (Point[] pair : segments) {
-            Point p1 = pair[0];
-            Point p2 = pair[1];
-            Integer value = connections.get(p1);
-            if (value == null)
-                value = 0;
-            value++;
-            connections.put(p1, value);
-
-            value = connections.get(p2);
-            if (value == null)
-                value = 0;
-            value++;
-            connections.put(p2, value);
-        }
-
-        if (segments.size() == 0) {
-            isCircuit = false;
-        } else {
-            for (int v : connections.values()) {
-                if (v != 2) {
-                    isCircuit = false;
-                    break;
-                }
-            }
-        }
+//        // detects whether the segments form a circuit - but there's a bug!
+//        boolean isCircuit = true;
+//        HashMap<Point, Integer> connections = new HashMap<Point, Integer>();
+//        for (Line li: segments.getList()) {
+//            Point p1 = li.getStartPoint();
+//            Point p2 = li.getEndPoint();
+//            Integer value = connections.get(p1);
+//            if (value == null)
+//                value = 0;
+//            value++;
+//            connections.put(p1, value);
+//
+//            value = connections.get(p2);
+//            if (value == null)
+//                value = 0;
+//            value++;
+//            connections.put(p2, value);
+//        }
+//
+//        if (segments.size() == 0) {
+//            isCircuit = false;
+//        } else {
+//            for (int v : connections.values()) {
+//                if (v != 2) {
+//                    isCircuit = false;
+//                    break;
+//                }
+//            }
+//        }
 
 
         // see if user has solved the problem
-        if ((segments.size() == mapPoints.length) && isCircuit) {
+        if ((segments.size() == mapPoints.length) && segments.isCircuit()) {
             ArrayList<Point> shortestPath = ShortestPath.shortestPath(mapPoints);
             double shortestPathLength = calculatePathDistance(shortestPath);
 
             double myPathLength = 0;
-            for (Point[] pair : segments) {
-                Point p1 = pair[0];
-                Point p2 = pair[1];
-                double dx = p1.x - p2.x;
-                double dy = p1.y - p2.y;
-                double dist = Math.sqrt(dx * dx + dy * dy);
-                myPathLength += dist;
+            for (Line li: segments.getList()) {
+                Point p1 = li.getStartPoint();
+                Point p2 = li.getEndPoint();
+                myPathLength += Line.distance(p1, p2);
             }
 
             Log.v("RESULT", "Shortest path length is " + shortestPathLength + "; my path is " + myPathLength);
@@ -230,7 +219,7 @@ public class GameView extends View {
                 }
             }
         }
-        else if (segments.size() == mapPoints.length && !isCircuit) {
+        else if (segments.size() == mapPoints.length && !segments.isCircuit()) {
             Toast.makeText(getContext(), "That's not a circuit! Select Clear from the menu and start over", Toast.LENGTH_LONG).show();
         }
 
@@ -244,54 +233,51 @@ public class GameView extends View {
         Point p = new Point();
         p.x = ((int)event.getX());
         p.y = ((int)event.getY());
+        stroke.setColor(Color.YELLOW);
+        stroke.setWidth(10);
 
         if (event.getAction() == MotionEvent.ACTION_DOWN) {
 
             // only add the segment if the touch point is within 30 of any of the other points
             for (int i = 0; i < mapPoints.length; i++) {
-                double dx = p.x - mapPoints[i].x;
-                double dy = p.y - mapPoints[i].y;
-                double dist = Math.sqrt(dx*dx + dy*dy);
+                double dist = Line.distance(p, mapPoints[i]);
                 if (dist < 30) {
                     // the "+10" part is a bit of a fudge factor because the point itself is the
                     // upper-left corner of the little red box but we want the center
                     p.x = mapPoints[i].x+10;
                     p.y = mapPoints[i].y+10;
-                    coordinates.add(new Point(p.x, p.y));
+                    stroke.addPoint(p.x, p.y);
+                    stroke.setValid(true);
                     firstPoint = p;
-                    isValidStroke = true;
                     break;
                 }
             }
         }
         else if (event.getAction() == MotionEvent.ACTION_MOVE) {
-            if (isValidStroke) {
-                coordinates.add(new Point(p.x, p.y));
+            if (stroke.isValid()) {
+                stroke.addPoint(p.x, p.y);
             }
         }
         else if (event.getAction() == MotionEvent.ACTION_UP) {
-            if (isValidStroke) {
+            if (stroke.isValid()) {
 
-                coordinates.clear();
+                stroke.clearAll();
                 // only add the segment if the release point is within 30 of any of the other points
                 for (int i = 0; i < mapPoints.length; i++) {
-                    double dx = p.x - mapPoints[i].x;
-                    double dy = p.y - mapPoints[i].y;
-                    double dist = Math.sqrt(dx * dx + dy * dy);
+                    double dist = Line.distance(p, mapPoints[i]);
 
                     if (dist < 30) {
                         p.x = mapPoints[i].x + 10;
                         p.y = mapPoints[i].y + 10;
-                        Point[] points = {firstPoint, p};
-
+                        Line line = new Line(firstPoint, p);
                         if (firstPoint.x != p.x && firstPoint.y != p.y) {
-                            segments.add(points);
+                            segments.addItem(line);
                         }
                         break;
                     }
                 }
             }
-            isValidStroke = false;
+            stroke.setValid(false);
         }
         else {
             return false;

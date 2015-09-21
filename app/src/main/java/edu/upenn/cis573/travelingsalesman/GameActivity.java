@@ -36,7 +36,7 @@ public class GameActivity extends android.support.v7.app.ActionBarActivity {
 
         if (id == R.id.menu_clear) {
             GameView gv = (GameView)findViewById(R.id.gameView);
-            gv.segments.clear();
+            gv.segments.clearAll();
             gv.invalidate();
             return true;
         }
@@ -46,7 +46,7 @@ public class GameActivity extends android.support.v7.app.ActionBarActivity {
         } else if (id == R.id.menu_undo) {
             GameView gv = (GameView)findViewById(R.id.gameView);
             if (gv.segments.size() > 0) {
-                gv.segments.remove(gv.segments.get(gv.segments.size() - 1));
+                gv.segments.removeLast();
             } else {
                 Toast.makeText(gv.getContext(), "There's nothing to undo.", Toast.LENGTH_LONG).show();
             }
