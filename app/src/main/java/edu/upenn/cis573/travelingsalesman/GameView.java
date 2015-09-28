@@ -139,37 +139,6 @@ public class GameView extends View {
             canvas.drawRect(x, y, x+20, y+20, paint);
         }
 
-//        // detects whether the segments form a circuit - but there's a bug!
-//        boolean isCircuit = true;
-//        HashMap<Point, Integer> connections = new HashMap<Point, Integer>();
-//        for (Line li: segments.getList()) {
-//            Point p1 = li.getStartPoint();
-//            Point p2 = li.getEndPoint();
-//            Integer value = connections.get(p1);
-//            if (value == null)
-//                value = 0;
-//            value++;
-//            connections.put(p1, value);
-//
-//            value = connections.get(p2);
-//            if (value == null)
-//                value = 0;
-//            value++;
-//            connections.put(p2, value);
-//        }
-//
-//        if (segments.size() == 0) {
-//            isCircuit = false;
-//        } else {
-//            for (int v : connections.values()) {
-//                if (v != 2) {
-//                    isCircuit = false;
-//                    break;
-//                }
-//            }
-//        }
-
-
         // see if user has solved the problem
         if ((segments.size() == mapPoints.length) && segments.isCircuit()) {
             ArrayList<Point> shortestPath = ShortestPath.shortestPath(mapPoints);
